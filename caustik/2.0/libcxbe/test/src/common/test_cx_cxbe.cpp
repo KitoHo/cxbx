@@ -1,12 +1,12 @@
 /******************************************************************************
- * 
+ *
  * Caustik's Xbox Executable Library Project
  *
  * Copyright (c) 2007, Aaron "Caustik" Robinson
  * All rights reserved.
  * 
- * File := cxbe.h
- * Desc := Primary project include file
+ * File := test_cx_cxbe.cpp
+ * Desc := Test module for cx_cxbe.
  * 
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -36,10 +36,34 @@
  * 
  *****************************************************************************/
 
-#ifndef CXBE_H
-#define CXBE_H
+#include "../main.h"
 
-#include "cxbe/cx_cxbe.h"
+/*! test cx_cxbe */
+bool test_cx_cxbe()
+{
+    bool success = false;
 
-#endif
+    /*! test cx_cxbe */
+    {
+//        bool ret;
+
+        /*! test basic initialization */
+        {
+            cx_cxbe *p_cxbe = new cx_cxbe();
+
+            delete p_cxbe;
+        }
+    }
+
+    /*! set sucess state */
+    success = true;
+
+    goto cleanup;
+
+cleanup:
+
+    rp_debug_trace("[ %s ] test_cx_cxbe\n", success ? "passed" : "failed");
+
+    return success;
+}
 
