@@ -39,6 +39,8 @@
 #ifndef CX_CXBE_H
 #define CX_CXBE_H
 
+#include <regplat.h>
+
 /*! @brief Xbox Executable class. */
 class cx_cxbe
 {
