@@ -1,11 +1,11 @@
 /******************************************************************************
- * 
+ *
  * Caustik's Xbox Executable Library Project
  *
  * Copyright (c) 2007, Aaron "Caustik" Robinson
  * All rights reserved.
  * 
- * File := cx_cxbe.h
+ * File := cx_cxbe.cpp
  * Desc := Xbox Executable class
  * 
  * Redistribution and use in source and binary forms, with or without 
@@ -32,33 +32,29 @@
  *   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
  *   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  *   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  * 
  *****************************************************************************/
 
-#ifndef CX_CXBE_H
-#define CX_CXBE_H
+#include "cxbe.h"
 
-#include <regplat.h>
-
-/*! @brief Xbox Executable class. */
-class cx_cxbe
+cx_cxbe::~cx_cxbe()
 {
-    public:
+    close();
+}
 
-        ~cx_cxbe();
+bool cx_cxbe::open(const wchar_t *file_name)
+{
+    return false;
+}
 
-        /*! load from the specified Xbe file */
-        bool open(const wchar_t *file_name);
+bool cx_cxbe::open(cx_cexe *p_cexe, const char *title, bool is_retail)
+{
+    return false;
+}
 
-        /*! load from the specified cexe instance */
-        bool open(cx_cexe *p_cexe, const char *title, bool is_retail);
-
-        /*! close the currently loaded file */
-        bool close();
-
-    private:
-};
-
-#endif
+bool cx_cxbe::close()
+{
+    return true;
+}
 
