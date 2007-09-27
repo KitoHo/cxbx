@@ -39,6 +39,7 @@
 #ifndef CXBE_H
 #define CXBE_H
 
+#include "cxbe/cx_cexe.h"
 #include "cxbe/cx_cxbe.h"
 
 #endif
