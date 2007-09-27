@@ -2,7 +2,7 @@
 
 int main()
 {
-    printf("Cxbe test placeholder\n");
+    printf("libcxbe test placeholder\n");
     return 0;
 }
 

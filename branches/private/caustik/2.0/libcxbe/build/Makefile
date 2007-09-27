@@ -1,6 +1,6 @@
 ###############################################################################
 #
-# Cxbe Project
+# libcxbe Project
 #
 # Copyright (c) 2007, Aaron "Caustik" Robinson
 # All rights reserved.
