@@ -45,11 +45,13 @@ bool test_cx_cxbe()
 
     /*! test cx_cxbe */
     {
-//        bool ret;
+        bool ret;
 
         /*! test basic initialization */
         {
             cx_cxbe *p_cxbe = new cx_cxbe();
+
+            ret = p_cxbe->open(L"X:\\cx_test\\3911\\bin\\release\\cx_xdk_blank.xbe");
 
             delete p_cxbe;
         }

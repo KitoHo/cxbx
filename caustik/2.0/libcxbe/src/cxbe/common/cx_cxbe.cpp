@@ -45,7 +45,25 @@ cx_cxbe::~cx_cxbe()
 
 bool cx_cxbe::open(const wchar_t *file_name)
 {
-    return false;
+    bool ret = false;
+
+    rp_debug_trace("cx_cxbe::open(\"%ls\")\n", file_name);
+
+    FILE *xbe_file = rp_file::open(file_name, L"rb");
+
+    if(xbe_file == 0)
+    {
+        rp_debug_error("cx_cxbe::open : Unable to open \"%ls\".\n");
+        goto cleanup;
+    }
+
+    ret = true;
+
+cleanup:
+
+    if(xbe_file != 0) { fclose(xbe_file); }
+
+    return ret;
 }
 
 bool cx_cxbe::open(cx_cexe *p_cexe, const char *title, bool is_retail)
