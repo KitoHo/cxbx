@@ -39,6 +39,9 @@
 #ifndef CXBE_H
 #define CXBE_H
 
+/*! Cxbe Version */
+#define CX_CXBE_VERSION "2.0-dev"
+
 #include "cxbe/cx_cexe.h"
 #include "cxbe/cx_cxbe.h"
 

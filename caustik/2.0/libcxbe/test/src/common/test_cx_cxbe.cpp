@@ -49,11 +49,23 @@ bool test_cx_cxbe()
 
         /*! test basic initialization */
         {
-            cx_cxbe *p_cxbe = new cx_cxbe();
+            cx_cxbe cxbe;
 
-            ret = p_cxbe->open(L"X:\\cx_test\\3911\\bin\\release\\cx_xdk_blank.xbe");
+            ret = cxbe.open(L"X:\\cx_test\\3911\\bin\\release\\cx_xdk_blank.xbe");
 
-            delete p_cxbe;
+            if(ret != true)
+            {
+                rp_debug_error("cxbe.open failed!\n");
+                goto cleanup;
+            }
+
+            ret = cxbe.dump_info(stdout);
+
+            if(ret != true)
+            {
+                rp_debug_error("cxbe.dump_stdout failed!\n");
+                goto cleanup;
+            }
         }
     }
 
