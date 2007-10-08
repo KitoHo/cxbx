@@ -57,7 +57,65 @@ class cx_cxbe
         /*! close the currently loaded file */
         bool close();
 
+        /*! dump xbe information to the specified file*/
+        bool dump_info(FILE *p_file);
+
     private:
+
+        /*! xbe image header */
+        struct _image_header
+        {
+            uint32 dwMagic;                             /*!< 0x0000 - magic number [should be "XBEH"] */
+            uint08 pbDigitalSignature[256];             /*!< 0x0004 - digital signature */
+            uint32 dwBaseAddr;                          /*!< 0x0104 - base address */
+            uint32 dwSizeofHeaders;                     /*!< 0x0108 - size of headers */
+            uint32 dwSizeofImage;                       /*!< 0x010C - size of image */
+            uint32 dwSizeofImageHeader;                 /*!< 0x0110 - size of image header */
+            uint32 dwTimeDate;                          /*!< 0x0114 - timedate stamp */
+            uint32 dwCertificateAddr;                   /*!< 0x0118 - certificate address */
+            uint32 dwSections;                          /*!< 0x011C - number of sections */
+            uint32 dwSectionHeadersAddr;                /*!< 0x0120 - section headers address */
+
+            union
+            {
+                struct InitFlags                        /*!< 0x0124 - initialization flags */
+                {
+                    uint32 bMountUtilityDrive   : 1;    /*!< mount utility drive flag */
+                    uint32 bFormatUtilityDrive  : 1;    /*!< format utility drive flag */
+                    uint32 bLimit64MB           : 1;    /*!< limit development kit run time memory to 64mb flag */
+                    uint32 bDontSetupHarddisk   : 1;    /*!< don't setup hard disk flag */
+                    uint32 Unused               : 4;    /*!< unused (or unknown) */
+                    uint32 Unused_b1            : 8;    /*!< unused (or unknown) */
+                    uint32 Unused_b2            : 8;    /*!< unused (or unknown) */
+                    uint32 Unused_b3            : 8;    /*!< unused (or unknown) */
+                }
+                initFlags;
+
+                uint32 dwInitFlags;
+            };
+
+            uint32 dwEntryAddr;                         /*!< 0x0128 - entry point address */
+            uint32 dwTLSAddr;                           /*!< 0x012C - thread local storage directory address */
+            uint32 dwPeStackCommit;                     /*!< 0x0130 - size of stack commit */
+            uint32 dwPeHeapReserve;                     /*!< 0x0134 - size of heap reserve */
+            uint32 dwPeHeapCommit;                      /*!< 0x0138 - size of heap commit */
+            uint32 dwPeBaseAddr;                        /*!< 0x013C - original base address */
+            uint32 dwPeSizeofImage;                     /*!< 0x0140 - size of original image */
+            uint32 dwPeChecksum;                        /*!< 0x0144 - original checksum */
+            uint32 dwPeTimeDate;                        /*!< 0x0148 - original timedate stamp */
+            uint32 dwDebugPathnameAddr;                 /*!< 0x014C - debug pathname address */
+            uint32 dwDebugFilenameAddr;                 /*!< 0x0150 - debug filename address */
+            uint32 dwDebugUnicodeFilenameAddr;          /*!< 0x0154 - debug unicode filename address */
+            uint32 dwKernelImageThunkAddr;              /*!< 0x0158 - kernel image thunk address */
+            uint32 dwNonKernelImportDirAddr;            /*!< 0x015C - non kernel import directory address */
+            uint32 dwLibraryVersions;                   /*!< 0x0160 - number of library versions */
+            uint32 dwLibraryVersionsAddr;               /*!< 0x0164 - library versions address */
+            uint32 dwKernelLibraryVersionAddr;          /*!< 0x0168 - kernel library version address */
+            uint32 dwXAPILibraryVersionAddr;            /*!< 0x016C - xapi library version address */
+            uint32 dwLogoBitmapAddr;                    /*!< 0x0170 - logo bitmap address */
+            uint32 dwSizeofLogoBitmap;                  /*!< 0x0174 - logo bitmap size */
+        }
+        image_header;
 };
 
 #endif
