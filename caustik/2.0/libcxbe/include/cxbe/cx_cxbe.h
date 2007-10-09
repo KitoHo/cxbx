@@ -46,7 +46,8 @@ class cx_cxbe
 {
     public:
 
-        ~cx_cxbe();
+        cx_cxbe();
+        virtual ~cx_cxbe();
 
         /*! load from the specified Xbe file */
         bool open(const wchar_t *file_name);
@@ -76,9 +77,9 @@ class cx_cxbe
             uint32 dwSections;                          /*!< 0x011C - number of sections */
             uint32 dwSectionHeadersAddr;                /*!< 0x0120 - section headers address */
 
-            union
+            union _u_init_flags
             {
-                struct InitFlags                        /*!< 0x0124 - initialization flags */
+                struct _init_flags                      /*!< 0x0124 - initialization flags */
                 {
                     uint32 bMountUtilityDrive   : 1;    /*!< mount utility drive flag */
                     uint32 bFormatUtilityDrive  : 1;    /*!< format utility drive flag */
@@ -89,10 +90,11 @@ class cx_cxbe
                     uint32 Unused_b2            : 8;    /*!< unused (or unknown) */
                     uint32 Unused_b3            : 8;    /*!< unused (or unknown) */
                 }
-                initFlags;
+                init_flags;
 
                 uint32 dwInitFlags;
-            };
+            }
+            u_init_flags;
 
             uint32 dwEntryAddr;                         /*!< 0x0128 - entry point address */
             uint32 dwTLSAddr;                           /*!< 0x012C - thread local storage directory address */
@@ -116,7 +118,13 @@ class cx_cxbe
             uint32 dwSizeofLogoBitmap;                  /*!< 0x0174 - logo bitmap size */
         }
         image_header;
+
+        /*! xbe image header extra bytes */
+        uint08 *p_extra_bytes;
 };
+
+/*! size of raw xbe image header */
+#define CX_CXBE_SIZEOF_IMAGE_HEADER 0x0178
 
 #endif
 
