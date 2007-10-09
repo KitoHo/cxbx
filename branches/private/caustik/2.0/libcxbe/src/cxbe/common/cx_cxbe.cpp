@@ -38,6 +38,12 @@
 
 #include "cxbe.h"
 
+cx_cxbe::cx_cxbe()
+{
+    memset(&image_header, 0, sizeof(image_header));
+    p_extra_bytes = 0;
+}
+
 cx_cxbe::~cx_cxbe()
 {
     close();
@@ -54,7 +60,7 @@ bool cx_cxbe::open(const wchar_t *file_name)
     /*! validate file opened */
     if(!xbe_file.open(file_name))
     {
-        rp_debug_error("cx_cxbe::open : Unable to open \"%ls\".\n");
+        rp_debug_error("cx_cxbe::open : Unable to open \"%ls\".\n", file_name);
         goto cleanup;
     }
 
@@ -72,7 +78,7 @@ bool cx_cxbe::open(const wchar_t *file_name)
         ret |= xbe_file.get_uint32(&image_header.dwCertificateAddr);
         ret |= xbe_file.get_uint32(&image_header.dwSections);
         ret |= xbe_file.get_uint32(&image_header.dwSectionHeadersAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwInitFlags);
+        ret |= xbe_file.get_uint32(&image_header.u_init_flags.dwInitFlags);
         ret |= xbe_file.get_uint32(&image_header.dwEntryAddr);
         ret |= xbe_file.get_uint32(&image_header.dwTLSAddr);
         ret |= xbe_file.get_uint32(&image_header.dwPeStackCommit);
@@ -101,6 +107,25 @@ bool cx_cxbe::open(const wchar_t *file_name)
         }
     }
 
+    /*! read xbe image header extra bytes */
+    {
+        uint32 ex_size = rp_math::round_up(image_header.dwSizeofHeaders, 0x1000) - CX_CXBE_SIZEOF_IMAGE_HEADER;
+
+        p_extra_bytes = new uint08[ex_size];
+
+        if(p_extra_bytes == 0)
+        {
+            rp_debug_error("cx_cxbe::open : Unable to allocate memory for image header extra bytes.\n");
+            goto cleanup;
+        }
+
+        if(!xbe_file.get_barray(p_extra_bytes, ex_size))
+        {
+            rp_debug_error("cx_cxbe::open : Unable to read image header extra bytes.\n");
+            goto cleanup;
+        }
+    }
+
     ret = true;
 
 cleanup:
@@ -117,6 +142,12 @@ bool cx_cxbe::open(cx_cexe *p_cexe, const char *title, bool is_retail)
 
 bool cx_cxbe::close()
 {
+    if(p_extra_bytes != 0)
+    {
+        delete[] p_extra_bytes;
+        p_extra_bytes = 0;
+    }
+
     return true;
 }
 
