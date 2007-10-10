@@ -40,8 +40,9 @@
 
 cx_cxbe::cx_cxbe()
 {
-    memset(&image_header, 0, sizeof(image_header));
     p_extra_bytes = 0;
+
+    close();
 }
 
 cx_cxbe::~cx_cxbe()
@@ -51,7 +52,7 @@ cx_cxbe::~cx_cxbe()
 
 bool cx_cxbe::open(const wchar_t *file_name)
 {
-    bool ret = false;
+    bool ret = false, chk = true;
 
     rp_debug_trace("cx_cxbe::open(\"%ls\")\n", file_name);
 
@@ -68,41 +69,48 @@ bool cx_cxbe::open(const wchar_t *file_name)
 
     /*! read xbe image header */
     {
-        ret |= xbe_file.get_uint32(&image_header.dwMagic);
-        ret |= xbe_file.get_barray(image_header.pbDigitalSignature, 256);
-        ret |= xbe_file.get_uint32(&image_header.dwBaseAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwSizeofHeaders);
-        ret |= xbe_file.get_uint32(&image_header.dwSizeofImage);
-        ret |= xbe_file.get_uint32(&image_header.dwSizeofImageHeader);
-        ret |= xbe_file.get_uint32(&image_header.dwTimeDate);
-        ret |= xbe_file.get_uint32(&image_header.dwCertificateAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwSections);
-        ret |= xbe_file.get_uint32(&image_header.dwSectionHeadersAddr);
-        ret |= xbe_file.get_uint32(&image_header.u_init_flags.dwInitFlags);
-        ret |= xbe_file.get_uint32(&image_header.dwEntryAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwTLSAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwPeStackCommit);
-        ret |= xbe_file.get_uint32(&image_header.dwPeHeapReserve);
-        ret |= xbe_file.get_uint32(&image_header.dwPeHeapCommit);
-        ret |= xbe_file.get_uint32(&image_header.dwPeBaseAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwPeSizeofImage);
-        ret |= xbe_file.get_uint32(&image_header.dwPeChecksum);
-        ret |= xbe_file.get_uint32(&image_header.dwPeTimeDate);
-        ret |= xbe_file.get_uint32(&image_header.dwDebugPathnameAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwDebugFilenameAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwDebugUnicodeFilenameAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwKernelImageThunkAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwNonKernelImportDirAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwLibraryVersions);
-        ret |= xbe_file.get_uint32(&image_header.dwLibraryVersionsAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwKernelLibraryVersionAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwXAPILibraryVersionAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwLogoBitmapAddr);
-        ret |= xbe_file.get_uint32(&image_header.dwSizeofLogoBitmap);
+        chk |= xbe_file.get_uint32(&image_header.dwMagic);
+        chk |= xbe_file.get_barray(image_header.pbDigitalSignature, 256);
+        chk |= xbe_file.get_uint32(&image_header.dwBaseAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwSizeofHeaders);
+        chk |= xbe_file.get_uint32(&image_header.dwSizeofImage);
+        chk |= xbe_file.get_uint32(&image_header.dwSizeofImageHeader);
+        chk |= xbe_file.get_uint32(&image_header.dwTimeDate);
+        chk |= xbe_file.get_uint32(&image_header.dwCertificateAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwSections);
+        chk |= xbe_file.get_uint32(&image_header.dwSectionHeadersAddr);
+        chk |= xbe_file.get_uint32(&image_header.u_init_flags.dwInitFlags);
+        chk |= xbe_file.get_uint32(&image_header.dwEntryAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwTLSAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwPeStackCommit);
+        chk |= xbe_file.get_uint32(&image_header.dwPeHeapReserve);
+        chk |= xbe_file.get_uint32(&image_header.dwPeHeapCommit);
+        chk |= xbe_file.get_uint32(&image_header.dwPeBaseAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwPeSizeofImage);
+        chk |= xbe_file.get_uint32(&image_header.dwPeChecksum);
+        chk |= xbe_file.get_uint32(&image_header.dwPeTimeDate);
+        chk |= xbe_file.get_uint32(&image_header.dwDebugPathnameAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwDebugFilenameAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwDebugUnicodeFilenameAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwKernelImageThunkAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwNonKernelImportDirAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwLibraryVersions);
+        chk |= xbe_file.get_uint32(&image_header.dwLibraryVersionsAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwKernelLibraryVersionAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwXAPILibraryVersionAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwLogoBitmapAddr);
+        chk |= xbe_file.get_uint32(&image_header.dwSizeofLogoBitmap);
 
-        if(!ret)
+        if(!chk)
         {
             rp_debug_error("cx_cxbe::open : Unable to read image header.\n");
+            goto cleanup;
+        }
+
+        /*! validate magic number */
+        if(image_header.dwMagic != rp_binary::four_cc("XBEH"))
+        {
+            rp_debug_error("cx_cxbe::open : Invalid magic number.\n");
             goto cleanup;
         }
     }
@@ -113,17 +121,56 @@ bool cx_cxbe::open(const wchar_t *file_name)
 
         p_extra_bytes = new uint08[ex_size];
 
+        /*! validate memory allocation */
         if(p_extra_bytes == 0)
         {
             rp_debug_error("cx_cxbe::open : Unable to allocate memory for image header extra bytes.\n");
             goto cleanup;
         }
 
+        /*! read raw bytes from xbe_file */
         if(!xbe_file.get_barray(p_extra_bytes, ex_size))
         {
             rp_debug_error("cx_cxbe::open : Unable to read image header extra bytes.\n");
             goto cleanup;
         }
+    }
+
+    /*! read xbe certificate */
+    {
+        int v;
+
+        if(!xbe_file.seek_abs(image_header.dwCertificateAddr - image_header.dwBaseAddr))
+        {
+            rp_debug_error("cx_cxbe::open : Unable to seek to xbe certificate.\n");
+            goto cleanup;
+        }
+
+        chk |= xbe_file.get_uint32(&certificate.dwSize);
+        chk |= xbe_file.get_uint32(&certificate.dwTimeDate);
+        chk |= xbe_file.get_uint32(&certificate.dwTitleId);
+        /*! @todo support wchar_t more correctly by converting from UTF-16 to wchar_t */
+        chk |= xbe_file.get_barray((uint08*)certificate.wszTitleName, 40*sizeof(wchar_t));
+        /*! @todo support uint32 arrays? */
+        chk |= xbe_file.get_barray((uint08*)certificate.dwAlternateTitleId, 0x10*sizeof(uint32));
+        chk |= xbe_file.get_uint32(&certificate.dwAllowedMedia);
+        chk |= xbe_file.get_uint32(&certificate.dwGameRegion);
+        chk |= xbe_file.get_uint32(&certificate.dwGameRatings);
+        chk |= xbe_file.get_uint32(&certificate.dwDiskNumber);
+        chk |= xbe_file.get_uint32(&certificate.dwVersion);
+        chk |= xbe_file.get_barray(certificate.bzLanKey, 16);
+        chk |= xbe_file.get_barray(certificate.bzSignatureKey, 16);
+
+        for(v=0;v<16;v++) { chk |= xbe_file.get_barray(certificate.bzTitleAlternateSignatureKey[v], 16); }
+
+        if(!chk)
+        {
+            rp_debug_error("cx_cxbe::open : Unable to read image header.\n");
+            goto cleanup;
+        }
+
+        /*! convert ascii title */
+        wcstombs(ascii_title, certificate.wszTitleName, 40);
     }
 
     ret = true;
@@ -148,6 +195,10 @@ bool cx_cxbe::close()
         p_extra_bytes = 0;
     }
 
+    memset(&image_header, 0, sizeof(image_header));
+    memset(&certificate, 0, sizeof(certificate));
+    memset(ascii_title, 0, sizeof(ascii_title));
+
     return true;
 }
 
@@ -166,7 +217,11 @@ bool cx_cxbe::dump_info(FILE *p_file)
     fprintf(p_file, "Project : http://www.caustik.com/cxbx/\n");
     fprintf(p_file, "Source  : http://sourceforge.net/projects/cxbx/\n");
     fprintf(p_file, "\n");
-
+    fprintf(p_file, "Title Name : \"%s\"\n", ascii_title);
+    fprintf(p_file, "\n");
+    fprintf(p_file, "Xbe File image header\n");
+    fprintf(p_file, "\n");
+   
     return true;
 }
 

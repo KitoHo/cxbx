@@ -121,6 +121,28 @@ class cx_cxbe
 
         /*! xbe image header extra bytes */
         uint08 *p_extra_bytes;
+
+        /*! xbe certificate */
+        struct _certificate
+        {
+            uint32  dwSize;                               /*!< 0x0000 - size of certificate */
+            uint32  dwTimeDate;                           /*!< 0x0004 - timedate stamp */
+            uint32  dwTitleId;                            /*!< 0x0008 - title id */
+            wchar_t wszTitleName[40];                     /*!< 0x000C - title name (unicode) */
+            uint32  dwAlternateTitleId[0x10];             /*!< 0x005C - alternate title ids */
+            uint32  dwAllowedMedia;                       /*!< 0x009C - allowed media types */
+            uint32  dwGameRegion;                         /*!< 0x00A0 - game region */
+            uint32  dwGameRatings;                        /*!< 0x00A4 - game ratings */
+            uint32  dwDiskNumber;                         /*!< 0x00A8 - disk number */
+            uint32  dwVersion;                            /*!< 0x00AC - version */
+            uint08  bzLanKey[16];                         /*!< 0x00B0 - lan key */
+            uint08  bzSignatureKey[16];                   /*!< 0x00C0 - signature key */
+            uint08  bzTitleAlternateSignatureKey[16][16]; /*!< 0x00D0 - alternate signature keys */
+        }
+        certificate;
+
+        /*! xbe title */
+        char ascii_title[40];
 };
 
 /*! size of raw xbe image header */
