@@ -5,8 +5,8 @@
  * Copyright (c) 2007, Aaron "Caustik" Robinson
  * All rights reserved.
  * 
- * File := cxbe.h
- * Desc := Primary project include file
+ * File := cx_cexe.h
+ * Desc := Windows Portable Executable (PE) class
  * 
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -36,14 +36,26 @@
  * 
  *****************************************************************************/
 
-#ifndef CXBE_H
-#define CXBE_H
+#ifndef CX_CEXE_H
+#define CX_CEXE_H
 
-/*! Cxbe Version */
-#define CX_CXBE_VERSION "2.0-dev"
+#include <regplat.h>
 
-#include "cxbe/cx_cexe.h"
-#include "cxbe/cx_cxbe.h"
+/*! @brief Windows Portable Executable (PE) class. */
+class cx_cexe
+{
+    public:
+
+       ~cx_cexe();
+
+        /*! load from the specified Xbe file */
+        bool open(const wchar_t *file_name);
+
+        /*! close the currently loaded file */
+        bool close();
+
+    private:
+};
 
 #endif
 
