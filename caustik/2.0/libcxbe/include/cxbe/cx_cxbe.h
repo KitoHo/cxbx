@@ -41,6 +41,8 @@
 
 #include <regplat.h>
 
+#include <string>
+
 /*! @brief Xbox Executable class. */
 class cx_cxbe
 {
