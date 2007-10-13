@@ -38,6 +38,8 @@
 
 #include "cxbe.h"
 
+#include <time.h>
+
 cx_cxbe::cx_cxbe()
 {
     p_extra_bytes = 0;
@@ -219,9 +221,92 @@ bool cx_cxbe::dump_info(FILE *p_file)
     fprintf(p_file, "\n");
     fprintf(p_file, "Title Name : \"%s\"\n", ascii_title);
     fprintf(p_file, "\n");
-    fprintf(p_file, "Xbe File image header\n");
+    fprintf(p_file, "<Xbe Image Header>\n");
+    fprintf(p_file, "\n");   
+    fprintf(p_file, "Magic Number                     : XBEH\n");
+
+    // print digital signature
+    {
+        int x, y;
+
+        fprintf(p_file, "Digitial Signature               : <Hex Dump>");
+
+        for(y=0;y<16;y++)
+        {
+            fprintf(p_file, "\n                                   ");
+
+            for(x=0;x<16;x++)
+            {
+                fprintf(p_file, "%.02X", image_header.pbDigitalSignature[y*16+x]);
+            }
+        }
+
+        fprintf(p_file, "\n                                   </Hex Dump>\n");
+    }
+
+    fprintf(p_file, "Base Address                     : 0x%.08X\n", image_header.dwBaseAddr);
+    fprintf(p_file, "Size of Headers                  : 0x%.08X\n", image_header.dwSizeofHeaders);
+    fprintf(p_file, "Size of Image                    : 0x%.08X\n", image_header.dwSizeofImage);
+    fprintf(p_file, "Size of Image Header             : 0x%.08X\n", image_header.dwSizeofImageHeader);
+    fprintf(p_file, "TimeDate Stamp                   : 0x%.08X (%s)\n", image_header.dwTimeDate, get_time_string(image_header.dwTimeDate).c_str());
+    fprintf(p_file, "Certificate Address              : 0x%.08X\n", image_header.dwCertificateAddr);
+    fprintf(p_file, "Number of Sections               : 0x%.08X\n", image_header.dwSections);
+    fprintf(p_file, "Section Headers Address          : 0x%.08X\n", image_header.dwSectionHeadersAddr);
+
+    /*! display init flags */
+    {
+        fprintf(p_file, "Init Flags                       : 0x%.08X ", image_header.u_init_flags.init_flags);
+
+        if(image_header.u_init_flags.init_flags.bMountUtilityDrive)
+        {
+            fprintf(p_file, "[Mount Utility Drive] ");
+        }
+
+        if(image_header.u_init_flags.init_flags.bFormatUtilityDrive)
+        {
+            fprintf(p_file, "[Format Utility Drive] ");
+        }
+
+        if(image_header.u_init_flags.init_flags.bLimit64MB)
+        {
+            fprintf(p_file, "[Limit Devkit Run Time Memory to 64MB] ");
+        }
+
+        if(!image_header.u_init_flags.init_flags.bDontSetupHarddisk)
+        {
+            fprintf(p_file, "[Setup Harddisk] ");
+        }
+
+        fprintf(p_file, "\n");
+    }
+
+    /*! @todo add the rest after we can access the section headers */
+
     fprintf(p_file, "\n");
-   
+    fprintf(p_file, "</Xbe Image Header>\n");
+
     return true;
+}
+
+std::string cx_cxbe::get_time_string(uint32 time_val)
+{
+    std::string str = "";
+
+    time_t val = (time_t)time_val;
+
+    const char *ctime_str = ctime((time_t*)&val);
+
+    if(ctime_str != 0)
+    {
+        str = ctime_str;
+
+        int v;
+
+        for(v=0;str[v] != '\n';v++);
+
+        str[v] = '\0';
+    }
+
+    return str;
 }
 

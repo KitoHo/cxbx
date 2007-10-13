@@ -63,6 +63,9 @@ class cx_cxbe
 
     private:
 
+        /*! convert time into a pretty string */
+        std::string get_time_string(uint32 time_val);
+
         /*! xbe image header */
         struct _image_header
         {
