@@ -255,7 +255,7 @@ bool cx_cxbe::dump_info(FILE *p_file)
 
     /*! display init flags */
     {
-        fprintf(p_file, "Init Flags                       : 0x%.08X ", image_header.u_init_flags.init_flags);
+        fprintf(p_file, "Init Flags                       : 0x%.08X ", image_header.u_init_flags.dwInitFlags);
 
         if(image_header.u_init_flags.init_flags.bMountUtilityDrive)
         {
