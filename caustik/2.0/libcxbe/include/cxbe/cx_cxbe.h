@@ -200,6 +200,45 @@ class cx_cxbe
 
         /*! xbe section names */
         char (*section_name)[9];
+
+        /*! xbe library version */
+        struct _library_version
+        {
+            char   szName[8];                   /*!< library name */
+            uint16 wMajorVersion;               /*!< major version */
+            uint16 wMinorVersion;               /*!< minor version */
+            uint16 wBuildVersion;               /*!< build version */
+
+            union _u_flags
+            {
+                struct _flags
+                {
+                    uint16 QFEVersion       : 13;   /*!< QFE Version */
+                    uint16 Approved         : 2;    /*!< Approved? (0:no, 1:possibly, 2:yes) */
+                    uint16 bDebugBuild      : 1;    /*!< Is this a debug build? */
+                }
+                flags;
+
+                uint16 wFlags;
+            }
+            u_flags;
+        }
+        *p_library_version, *p_library_version_kernel, *p_library_version_xapi;
+
+        /*! xbe thread local storage information */
+        struct _tls
+        {
+            uint32 dwDataStartAddr;             /*!< raw start address */
+            uint32 dwDataEndAddr;               /*!< raw end address */
+            uint32 dwTLSIndexAddr;              /*!< tls index  address */
+            uint32 dwTLSCallbackAddr;           /*!< tls callback address */
+            uint32 dwSizeofZeroFill;            /*!< size of zero fill */
+            uint32 dwCharacteristics;           /*!< characteristics */
+        }
+        *p_tls;
+
+        /*! parse library version */
+        bool parse_library_version(rp_file *p_xbe_file, _library_version *p_library_version);
 };
 
 /*! size of raw xbe image header */

@@ -47,6 +47,12 @@ cx_cxbe::cx_cxbe()
     p_section = 0;
     section_name = 0;
 
+    p_library_version = 0;
+    p_library_version_kernel = 0;
+    p_library_version_xapi = 0;
+
+    p_tls = 0;
+
     close();
 }
 
@@ -293,6 +299,134 @@ bool cx_cxbe::open(const wchar_t *file_name)
         }
     }
 
+    rp_debug_trace("cx_cxbe::open : reading xbe library versions...\n");
+
+    /*! read xbe library versions */
+    if(image_header.dwLibraryVersionsAddr != 0)
+    {
+        if(!xbe_file.seek_abs(image_header.dwLibraryVersionsAddr - image_header.dwBaseAddr))
+        {
+            rp_debug_error("cx_cxbe::open : Unable to seek to xbe library versions.\n");
+            goto cleanup;
+        }
+
+        p_library_version = new _library_version[image_header.dwLibraryVersions];
+
+        if(p_library_version == 0)
+        {
+            rp_debug_error("cx_cxbe::open : Unable to allocate library versions [%d].\n", image_header.dwLibraryVersions);
+            goto cleanup;
+        }
+
+        uint32 v;
+
+        for(v=0;v<image_header.dwLibraryVersions;v++)
+        {
+            rp_debug_trace("cx_cxbe::open : reading xbe library version %d...\n", v);
+
+            chk = parse_library_version(&xbe_file, &p_library_version[v]);
+
+            if(!chk)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to read xbe library version %d.\n", v);
+                goto cleanup;
+            }
+        }
+
+        /*! read xbe kernel library version */
+        {
+            if(image_header.dwKernelLibraryVersionAddr == 0)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to locate kernel library version.\n");
+                goto cleanup;
+            }
+            
+            if(!xbe_file.seek_abs(image_header.dwKernelLibraryVersionAddr - image_header.dwBaseAddr))
+            {
+                rp_debug_error("cx_cxbe::open : Unable to seek to xbe kernel library versions.\n");
+                goto cleanup;
+            }
+
+            p_library_version_kernel = new _library_version;
+
+            if(p_library_version == 0)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to allocate kernel library version.\n");
+                goto cleanup;
+            }
+
+            chk = parse_library_version(&xbe_file, p_library_version_kernel);
+
+            if(!chk)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to read xbe kernel library version.\n");
+                goto cleanup;
+            }
+        }
+
+        /*! read xbe XAPI library version */
+        {
+            if(image_header.dwXAPILibraryVersionAddr == 0)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to locate XAPI library version.\n");
+                goto cleanup;
+            }
+            
+            if(!xbe_file.seek_abs(image_header.dwXAPILibraryVersionAddr - image_header.dwBaseAddr))
+            {
+                rp_debug_error("cx_cxbe::open : Unable to seek to xbe XAPI library versions.\n");
+                goto cleanup;
+            }
+
+            p_library_version_xapi = new _library_version;
+
+            if(p_library_version == 0)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to allocate XAPI library version.\n");
+                goto cleanup;
+            }
+
+            chk = parse_library_version(&xbe_file, p_library_version_xapi);
+
+            if(!chk)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to read xbe XAPI library version.\n");
+                goto cleanup;
+            }
+        }
+    }
+
+    rp_debug_trace("cx_cxbe::open : reading xbe thread local storage information...\n");
+
+    /*! read xbe thread local storage information */
+    if(image_header.dwTLSAddr != 0)
+    {
+        void *addr = get_addr(image_header.dwTLSAddr);
+
+        if(addr == 0)
+        {
+            rp_debug_error("cx_cxbe::open : Unable to locate Thread Local Storage information.\n");
+            goto cleanup;
+        }
+
+        p_tls = new _tls;
+
+        if(p_tls == 0)
+        {
+            rp_debug_error("cx_cxbe::open : Unable to allocate Thread Local Storage information.\n");
+            goto cleanup;
+        }
+
+        rp_binary parse(addr);
+
+        chk |= parse.get_uint32(&p_tls->dwDataStartAddr);
+        chk |= parse.get_uint32(&p_tls->dwDataEndAddr);
+        chk |= parse.get_uint32(&p_tls->dwTLSIndexAddr);
+        chk |= parse.get_uint32(&p_tls->dwTLSCallbackAddr);
+        chk |= parse.get_uint32(&p_tls->dwSizeofZeroFill);
+        chk |= parse.get_uint32(&p_tls->dwCharacteristics);
+    }
+
     ret = true;
 
 cleanup:
@@ -309,6 +443,30 @@ bool cx_cxbe::open(cx_cexe *p_cexe, const char *title, bool is_retail)
 
 bool cx_cxbe::close()
 {
+    if(p_tls != 0)
+    {
+        delete p_tls;
+        p_tls = 0;
+    }
+
+    if(p_library_version_xapi != 0)
+    {
+        delete p_library_version_xapi;
+        p_library_version_xapi = 0;
+    }
+
+    if(p_library_version_kernel != 0)
+    {
+        delete p_library_version_kernel;
+        p_library_version_kernel = 0;
+    }
+
+    if(p_library_version != 0)
+    {
+        delete[] p_library_version;
+        p_library_version = 0;
+    }
+
     if(section_name != 0)
     {
         delete[] section_name;
@@ -364,7 +522,7 @@ bool cx_cxbe::dump_info(FILE *p_file)
     fprintf(p_file, "\n");
     fprintf(p_file, "Title Name : \"%s\"\n", ascii_title);
     fprintf(p_file, "\n");
-    fprintf(p_file, "<Xbe Image Header>\n");
+    fprintf(p_file, "Dumping Xbe Image Header...\n");
     fprintf(p_file, "\n");   
     fprintf(p_file, "Magic Number                     : XBEH\n");
 
@@ -444,9 +602,242 @@ bool cx_cxbe::dump_info(FILE *p_file)
     fprintf(p_file, "Logo Bitmap Address              : 0x%.08X\n", image_header.dwLogoBitmapAddr);
     fprintf(p_file, "Logo Bitmap Size                 : 0x%.08X\n", image_header.dwSizeofLogoBitmap);
     fprintf(p_file, "\n");
-
+    fprintf(p_file, "Dumping Xbe Certificate...\n");
     fprintf(p_file, "\n");
-    fprintf(p_file, "</Xbe Image Header>\n");
+    fprintf(p_file, "Size of Certificate              : 0x%.08X\n", certificate.dwSize);
+    fprintf(p_file, "TimeDate Stamp                   : 0x%.08X (%s)\n", certificate.dwTimeDate, get_time_string(certificate.dwTimeDate).c_str());
+    fprintf(p_file, "Title ID                         : 0x%.08X\n", certificate.dwTitleId);
+    fprintf(p_file, "Title Name                       : 0x%.08X (\"%s\")\n", certificate.wszTitleName, ascii_title);
+
+    // print alternate title IDs
+    {
+        fprintf(p_file, "Alternate Titles IDs             : ");
+
+        uint32 v;
+
+        for(v=0;v<0x10;v++)
+        {
+            if(v != 0)
+            {
+                fprintf(p_file, "                                   ");
+            }
+
+            fprintf(p_file, "0x%.08X", certificate.dwAlternateTitleId[v]);
+
+            if(v != 0x0F)
+            {
+                fprintf(p_file, "\n");
+            }
+        }
+
+        fprintf(p_file, "\n");
+    }
+
+    fprintf(p_file, "Allowed Media                    : 0x%.08X\n", certificate.dwAllowedMedia);
+    fprintf(p_file, "Game Region                      : 0x%.08X\n", certificate.dwGameRegion);
+    fprintf(p_file, "Game Ratings                     : 0x%.08X\n", certificate.dwGameRatings);
+    fprintf(p_file, "Disk Number                      : 0x%.08X\n", certificate.dwDiskNumber);
+    fprintf(p_file, "Version                          : 0x%.08X\n", certificate.dwVersion);
+
+    /*! print LAN key */
+    {
+        fprintf(p_file, "LAN Key                          : ");
+
+        uint32 v;
+
+        for(v=0;v<16;v++)
+        {
+            fprintf(p_file, "%.02X", certificate.bzLanKey[v]);
+        }
+
+        fprintf(p_file, "\n");
+    }
+
+    /*! print signature key */
+    {
+        fprintf(p_file, "Signature Key                    : ");
+
+        uint32 v;        
+
+        for(v=0;v<16;v++)
+        {
+            fprintf(p_file, "%.02X", certificate.bzSignatureKey[v]);
+        }
+
+        fprintf(p_file, "\n");
+    }
+
+    /*! print alternate signature keys */
+    {
+        fprintf(p_file, "Title Alternate Signature Keys   : <Hex Dump>");
+
+        uint32 y, x;
+
+        for(y=0;y<16;y++)
+        {
+            fprintf(p_file, "\n                                   ");
+
+            for(x=0;x<16;x++)
+            {
+                fprintf(p_file, "%.02X", certificate.bzTitleAlternateSignatureKey[y][x]);
+            }
+        }
+
+        fprintf(p_file, "\n                                   </Hex Dump>\n");
+    }
+
+    fprintf(p_file, "\n");   
+    fprintf(p_file, "Dumping Xbe Section Headers...\n");
+    fprintf(p_file, "\n");   
+
+    /*! print section headers */
+    {
+        uint32 v;
+
+        for(v=0;v<image_header.dwSections;v++)
+        {
+            fprintf(p_file, "Section Name                     : 0x%.08X (\"%s\")\n", p_section_header[v].dwSectionNameAddr, section_name[v]);
+
+            /*! print section flags */
+            {
+                fprintf(p_file, "Flags                            : 0x%.08X ", p_section_header[v].u_flags.dwFlags);
+
+                if(p_section_header[v].u_flags.flags.bWritable)
+                {
+                    fprintf(p_file, "(Writable) ");
+                }
+
+                if(p_section_header[v].u_flags.flags.bPreload)
+                {
+                    fprintf(p_file, "(Preload) ");
+                }
+
+                if(p_section_header[v].u_flags.flags.bExecutable)
+                {
+                    fprintf(p_file, "(Executable) ");
+                }
+
+                if(p_section_header[v].u_flags.flags.bInsertedFile)
+                {
+                    fprintf(p_file, "(Inserted File) ");
+                }
+
+                if(p_section_header[v].u_flags.flags.bHeadPageRO)
+                {
+                    fprintf(p_file, "(Head Page RO) ");
+                }
+
+                if(p_section_header[v].u_flags.flags.bTailPageRO)
+                {
+                    fprintf(p_file, "(Tail Page RO) ");
+                }
+
+                fprintf(p_file, "\n");
+            }
+
+            fprintf(p_file, "Virtual Address                  : 0x%.08X\n", p_section_header[v].dwVirtualAddr);
+            fprintf(p_file, "Virtual Size                     : 0x%.08X\n", p_section_header[v].dwVirtualSize);
+            fprintf(p_file, "Raw Address                      : 0x%.08X\n", p_section_header[v].dwRawAddr);
+            fprintf(p_file, "Size of Raw                      : 0x%.08X\n", p_section_header[v].dwSizeofRaw);
+            fprintf(p_file, "Section Name Address             : 0x%.08X\n", p_section_header[v].dwSectionNameAddr);
+            fprintf(p_file, "Section Reference Count          : 0x%.08X\n", p_section_header[v].dwSectionRefCount);
+            fprintf(p_file, "Head Shared Reference Count Addr : 0x%.08X\n", p_section_header[v].dwHeadSharedRefCountAddr);
+            fprintf(p_file, "Tail Shared Reference Count Addr : 0x%.08X\n", p_section_header[v].dwTailSharedRefCountAddr);
+
+            /*! print section digest */
+            {
+                fprintf(p_file, "Section Digest                   : ");
+
+                uint32 s;
+
+                for(s=0;s<20;s++)
+                {
+                    fprintf(p_file, "%.02X", p_section_header[v].bzSectionDigest[s]);
+                }
+
+                fprintf(p_file, "\n");
+            }
+
+            fprintf(p_file, "\n");
+        }
+    }
+
+    fprintf(p_file, "Dumping Xbe Library Versions...\n");
+    fprintf(p_file, "\n");   
+
+    /*! print xbe library versions */
+    {
+        if( (p_library_version == 0) || (image_header.dwLibraryVersions == 0) )
+        {
+            fprintf(p_file, "(This Xbe contains no Library Versions)\n");
+            fprintf(p_file, "\n");
+        }
+        else
+        {
+            uint32 v;
+
+            for(v=0;v<image_header.dwLibraryVersions;v++)
+            {
+                char library_name[9] = { 0 };
+
+                strncpy(library_name, p_library_version[v].szName, 8);
+
+                fprintf(p_file, "Library Name                     : %s\n", library_name);
+                fprintf(p_file, "Version                          : %d.%d.%d\n", p_library_version[v].wMajorVersion, p_library_version[v].wMinorVersion, p_library_version[v].wBuildVersion);
+ 
+                /*! print xbe library version flags */
+                {
+                    fprintf(p_file, "Flags                            : ");
+
+                    fprintf(p_file, "QFEVersion : 0x%.04X, ", p_library_version[v].u_flags.flags.QFEVersion);
+
+                    if(p_library_version[v].u_flags.flags.bDebugBuild)
+                    {
+                        fprintf(p_file, "Debug, ");
+                    }
+                    else
+                    {
+                        fprintf(p_file, "Retail, ");
+                    }
+
+                    switch(p_library_version[v].u_flags.flags.Approved)
+                    {
+                        case 0:
+                            fprintf(p_file, "Unapproved");
+                            break;
+                        case 1:
+                            fprintf(p_file, "Possibly Approved");
+                            break;
+                        case 2:
+                            fprintf(p_file, "Approved");
+                            break;
+                    }
+
+                    fprintf(p_file, "\n");
+                }
+
+                fprintf(p_file, "\n");
+            }
+        }
+    }
+
+    fprintf(p_file, "Dumping Thread Local Storage information...\n");
+    fprintf(p_file, "\n");   
+
+    /*! print thread local storage information */
+    if(p_tls != 0)
+    {
+        fprintf(p_file, "Data Start Address               : 0x%.08X\n", p_tls->dwDataStartAddr);
+        fprintf(p_file, "Data End Address                 : 0x%.08X\n", p_tls->dwDataEndAddr);
+        fprintf(p_file, "TLS Index Address                : 0x%.08X\n", p_tls->dwTLSIndexAddr);
+        fprintf(p_file, "TLS Callback Address             : 0x%.08X\n", p_tls->dwTLSCallbackAddr);
+        fprintf(p_file, "Size of Zero Fill                : 0x%.08X\n", p_tls->dwSizeofZeroFill);
+        fprintf(p_file, "Characteristics                  : 0x%.08X\n", p_tls->dwCharacteristics);
+    }
+    else
+    {
+        fprintf(p_file, "(This Xbe contains no Thread Local Storage information)\n");
+    }
 
     return true;
 }
@@ -547,5 +938,21 @@ std::string cx_cxbe::parse_utf16(uint32 virt_addr)
     }
 
     return "";
+}
+
+bool cx_cxbe::parse_library_version(rp_file *p_xbe_file, _library_version *p_library_version)
+{
+    /*! sanity check */
+    if(p_xbe_file == 0) { return false; }
+
+    bool chk = true;
+
+    chk |= p_xbe_file->get_barray((uint08*)p_library_version->szName, 8);
+    chk |= p_xbe_file->get_uint16(&p_library_version->wMajorVersion);
+    chk |= p_xbe_file->get_uint16(&p_library_version->wMinorVersion);
+    chk |= p_xbe_file->get_uint16(&p_library_version->wBuildVersion);
+    chk |= p_xbe_file->get_uint16(&p_library_version->u_flags.wFlags);
+
+    return chk;
 }
 
