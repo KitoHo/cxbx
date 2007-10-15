@@ -60,7 +60,7 @@ class cx_cxbe
         /*! close the currently loaded file */
         bool close();
 
-        /*! dump xbe information to the specified file*/
+        /*! dump xbe information to the specified file */
         bool dump_info(FILE *p_file);
 
     private:
