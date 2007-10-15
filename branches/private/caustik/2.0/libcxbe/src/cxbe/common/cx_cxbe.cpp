@@ -44,6 +44,8 @@ cx_cxbe::cx_cxbe()
 {
     p_extra_bytes = 0;
     p_section_header = 0;
+    p_section = 0;
+    section_name = 0;
 
     close();
 }
@@ -177,7 +179,7 @@ bool cx_cxbe::open(const wchar_t *file_name)
         }
 
         /*! convert ascii title */
-        wcstombs(ascii_title, certificate.wszTitleName, 40);
+        wcstombs(ascii_title, certificate.wszTitleName, sizeof(ascii_title)-1);
     }
 
     rp_debug_trace("cx_cxbe::open : reading xbe section headers...\n");
@@ -223,6 +225,74 @@ bool cx_cxbe::open(const wchar_t *file_name)
         }
     }
 
+    rp_debug_trace("cx_cxbe::open : reading xbe sections...\n");
+
+    /*! read xbe sections */
+    {
+        p_section = new uint08*[image_header.dwSections];
+
+        if(p_section == 0)
+        {
+            rp_debug_error("cx_cxbe::open : Unable to allocate sections [%d].\n", image_header.dwSections);
+            goto cleanup;
+        }
+
+        memset(p_section, 0, image_header.dwSections*sizeof(uint08*));
+
+        uint32 v;
+
+        for(v=0;v<image_header.dwSections;v++)
+        {
+            rp_debug_trace("cx_cxbe::open : reading xbe section %d...\n", v);
+
+            uint32 raw_addr = p_section_header[v].dwRawAddr;
+            uint32 raw_size = p_section_header[v].dwSizeofRaw;
+
+            /*! handle zero sized section */
+            if(raw_size == 0) { continue; }
+
+            p_section[v] = new uint08[raw_size];
+
+            if(p_section[v] == 0)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to allocate section %d.\n", v);
+                goto cleanup;
+            }
+
+            if(!xbe_file.seek_abs(raw_addr))
+            {
+                rp_debug_error("cx_cxbe::open : Unable to seek to section %d.\n", v);
+                goto cleanup;
+            }
+
+            if(!xbe_file.get_barray(p_section[v], raw_size))
+            {
+                rp_debug_error("cx_cxbe::open : Unable to read section %d.\n", v);
+                goto cleanup;
+            }
+        }
+    }
+
+    rp_debug_trace("cx_cxbe::open : reading xbe section names...\n");
+
+    /*! read xbe section names */
+    {
+        section_name = new char[image_header.dwSections][9];
+
+        uint32 v;
+
+        for(v=0;v<image_header.dwSections;v++)
+        {
+            rp_debug_trace("cx_cxbe::open : reading xbe section %d name...\n", v);
+
+            const char *cur_name = (const char*)get_addr(p_section_header[v].dwSectionNameAddr);
+
+            memset(section_name[v], 0, sizeof(char)*9);
+
+            strncpy(section_name[v], (cur_name != 0) ? cur_name : "", 8);
+        }
+    }
+
     ret = true;
 
 cleanup:
@@ -239,6 +309,25 @@ bool cx_cxbe::open(cx_cexe *p_cexe, const char *title, bool is_retail)
 
 bool cx_cxbe::close()
 {
+    if(section_name != 0)
+    {
+        delete[] section_name;
+        section_name = 0;
+    }
+
+    if(p_section != 0)
+    {
+        uint32 v;
+
+        for(v=0;v<image_header.dwSections;v++)
+        {
+            delete[] p_section[v];
+            p_section[v] = 0;
+        }
+
+        delete[] p_section;
+    }
+
     if(p_section_header != 0)
     {
         delete[] p_section_header;
@@ -334,12 +423,71 @@ bool cx_cxbe::dump_info(FILE *p_file)
         fprintf(p_file, "\n");
     }
 
-    /*! @todo add the rest after we can access the section headers */
+    fprintf(p_file, "Entry Point                      : 0x%.08X (Retail: 0x%.08X, Debug: 0x%.08X)\n", image_header.dwEntryAddr, image_header.dwEntryAddr ^ CX_CXBE_XOR_KEY_EP_RETAIL, image_header.dwEntryAddr ^ CX_CXBE_XOR_KEY_EP_DEBUG);
+    fprintf(p_file, "TLS Address                      : 0x%.08X\n", image_header.dwTLSAddr);
+    fprintf(p_file, "(PE) Stack Commit                : 0x%.08X\n", image_header.dwPeStackCommit);
+    fprintf(p_file, "(PE) Heap Reserve                : 0x%.08X\n", image_header.dwPeHeapReserve);
+    fprintf(p_file, "(PE) Heap Commit                 : 0x%.08X\n", image_header.dwPeHeapCommit);
+    fprintf(p_file, "(PE) Base Address                : 0x%.08X\n", image_header.dwPeBaseAddr);
+    fprintf(p_file, "(PE) Size of Image               : 0x%.08X\n", image_header.dwPeSizeofImage);
+    fprintf(p_file, "(PE) Checksum                    : 0x%.08X\n", image_header.dwPeChecksum);
+    fprintf(p_file, "(PE) TimeDate Stamp              : 0x%.08X (%s)\n", image_header.dwPeTimeDate, get_time_string(image_header.dwPeTimeDate).c_str());
+    fprintf(p_file, "Debug Pathname Address           : 0x%.08X (\"%s\")\n", image_header.dwDebugPathnameAddr, parse_ascii(image_header.dwDebugPathnameAddr).c_str());
+    fprintf(p_file, "Debug Filename Address           : 0x%.08X (\"%s\")\n", image_header.dwDebugFilenameAddr, parse_ascii(image_header.dwDebugFilenameAddr).c_str());
+    fprintf(p_file, "Debug Unicode filename Address   : 0x%.08X (\"%s\")\n", image_header.dwDebugUnicodeFilenameAddr, parse_utf16(image_header.dwDebugUnicodeFilenameAddr).c_str());
+    fprintf(p_file, "Kernel Image Thunk Address       : 0x%.08X (Retail: 0x%.08X, Debug: 0x%.08X)\n", image_header.dwKernelImageThunkAddr, image_header.dwKernelImageThunkAddr ^ CX_CXBE_XOR_KEY_KT_RETAIL, image_header.dwKernelImageThunkAddr ^ CX_CXBE_XOR_KEY_KT_DEBUG);
+    fprintf(p_file, "NonKernel Import Dir Address     : 0x%.08X\n", image_header.dwNonKernelImportDirAddr);
+    fprintf(p_file, "Library Versions                 : 0x%.08X\n", image_header.dwLibraryVersions);
+    fprintf(p_file, "Library Versions Address         : 0x%.08X\n", image_header.dwLibraryVersionsAddr);
+    fprintf(p_file, "Kernel Library Version Address   : 0x%.08X\n", image_header.dwKernelLibraryVersionAddr);
+    fprintf(p_file, "XAPI Library Version Address     : 0x%.08X\n", image_header.dwXAPILibraryVersionAddr);
+    fprintf(p_file, "Logo Bitmap Address              : 0x%.08X\n", image_header.dwLogoBitmapAddr);
+    fprintf(p_file, "Logo Bitmap Size                 : 0x%.08X\n", image_header.dwSizeofLogoBitmap);
+    fprintf(p_file, "\n");
 
     fprintf(p_file, "\n");
     fprintf(p_file, "</Xbe Image Header>\n");
 
     return true;
+}
+
+void *cx_cxbe::get_addr(uint32 virt_addr)
+{
+    /*! calculate offset from base address */
+    uint32 offset = virt_addr - image_header.dwBaseAddr;
+
+    /*! calculate offset into image header, if appropriate */
+    if(offset < CX_CXBE_SIZEOF_IMAGE_HEADER)
+    {
+        rp_debug_error("cx_cxbe::open : Need cross-platform translation table for image header virtual address.\n");
+        return 0;
+    }
+
+    /*! calculate offset into image header extra bytes */
+    if(offset < image_header.dwSizeofHeaders)
+    {
+        return &p_extra_bytes[offset - CX_CXBE_SIZEOF_IMAGE_HEADER];
+    }
+
+    /*! calculate offset into an xbe section */
+    {
+        uint32 v;
+
+        for(v=0;v<image_header.dwSections;v++)
+        {
+            uint32 sect_virt_addr = p_section_header[v].dwVirtualAddr;
+            uint32 sect_virt_size = p_section_header[v].dwVirtualSize;
+
+            /*! validate virt_addr fits within this section's virtual address space */
+            if( (virt_addr >= sect_virt_addr) && (virt_addr < (sect_virt_addr + sect_virt_size)) )
+            {
+                /*! return appropriate offset into raw section data */
+                return &p_section[v][sect_virt_addr - virt_addr];
+            }
+        }
+    }
+
+    return 0;
 }
 
 std::string cx_cxbe::get_time_string(uint32 time_val)
@@ -362,5 +510,42 @@ std::string cx_cxbe::get_time_string(uint32 time_val)
     }
 
     return str;
+}
+
+std::string cx_cxbe::parse_ascii(uint32 virt_addr)
+{
+    /*! @todo verify this is the realistic max */
+    static const int max_raw_size = 40;
+
+    /*! @todo add proper UTF-16 parsing */
+    char *virt_str = (char*)get_addr(virt_addr);
+
+    /*! convert string, if located */
+    if(virt_str != 0) { return virt_str; }
+
+    return "";
+}
+
+std::string cx_cxbe::parse_utf16(uint32 virt_addr)
+{
+    /*! @todo verify this is the realistic max */
+    static const int max_raw_size = 40;
+
+    /*! @todo add proper UTF-16 parsing */
+    wchar_t *virt_str = (wchar_t*)get_addr(virt_addr);
+
+    /*! convert string, if located */
+    if(virt_str != 0)
+    {
+        rp_auto_malloc<char> raw_str(max_raw_size);
+
+        memset(raw_str, 0, max_raw_size*sizeof(char));
+
+        wcstombs(raw_str, virt_str, max_raw_size-1);
+
+        return raw_str.get_ptr();
+    }
+
+    return "";
 }
 

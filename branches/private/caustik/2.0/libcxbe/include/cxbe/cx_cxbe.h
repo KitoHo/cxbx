@@ -65,8 +65,17 @@ class cx_cxbe
 
     private:
 
+        /*! translate virtual address into pointers inside internal xbe cache */
+        void *get_addr(uint32 virt_addr);
+
         /*! convert time into a pretty string */
         std::string get_time_string(uint32 time_val);
+
+        /*! parse ascii string into std::string */
+        std::string parse_ascii(uint32 virt_addr);
+
+        /*! parse UTF-16 string into std::string */
+        std::string parse_utf16(uint32 virt_addr);
 
         /*! xbe image header */
         struct _image_header
@@ -185,10 +194,29 @@ class cx_cxbe
             uint08 bzSectionDigest[20];         /*!< section digest */
         }
         *p_section_header;
+
+        /*! xbe sections */
+        uint08 **p_section;
+
+        /*! xbe section names */
+        char (*section_name)[9];
 };
 
 /*! size of raw xbe image header */
 #define CX_CXBE_SIZEOF_IMAGE_HEADER 0x0178
+
+/*! \name Xbe XOR keys */
+/*! \{ */
+
+/*! Entry Point XOR key (Debug) */
+#define CX_CXBE_XOR_KEY_EP_DEBUG    0x94859D4B
+/*! Entry Point XOR key (Retail) */
+#define CX_CXBE_XOR_KEY_EP_RETAIL   0xA8FC57AB
+/*! Kernel Thunk XOR key (Debug) */
+#define CX_CXBE_XOR_KEY_KT_DEBUG    0xEFB1F152
+/*! Kernel Thunk XOR key (Retail) */
+#define CX_CXBE_XOR_KEY_KT_RETAIL   0x5B6D40B6
+/*! \} */
 
 #endif
 
