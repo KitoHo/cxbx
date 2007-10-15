@@ -43,6 +43,7 @@
 cx_cxbe::cx_cxbe()
 {
     p_extra_bytes = 0;
+    p_section_header = 0;
 
     close();
 }
@@ -67,7 +68,7 @@ bool cx_cxbe::open(const wchar_t *file_name)
         goto cleanup;
     }
 
-    rp_debug_trace("cx_cxbe::open : reading image header...\n");
+    rp_debug_trace("cx_cxbe::open : reading xbe image header...\n");
 
     /*! read xbe image header */
     {
@@ -117,6 +118,8 @@ bool cx_cxbe::open(const wchar_t *file_name)
         }
     }
 
+    rp_debug_trace("cx_cxbe::open : reading xbe image header extra bytes...\n");
+
     /*! read xbe image header extra bytes */
     {
         uint32 ex_size = rp_math::round_up(image_header.dwSizeofHeaders, 0x1000) - CX_CXBE_SIZEOF_IMAGE_HEADER;
@@ -137,6 +140,8 @@ bool cx_cxbe::open(const wchar_t *file_name)
             goto cleanup;
         }
     }
+
+    rp_debug_trace("cx_cxbe::open : reading xbe certificate...\n");
 
     /*! read xbe certificate */
     {
@@ -175,6 +180,49 @@ bool cx_cxbe::open(const wchar_t *file_name)
         wcstombs(ascii_title, certificate.wszTitleName, 40);
     }
 
+    rp_debug_trace("cx_cxbe::open : reading xbe section headers...\n");
+
+    /*! read xbe section headers */
+    {
+        if(!xbe_file.seek_abs(image_header.dwSectionHeadersAddr - image_header.dwBaseAddr))
+        {
+            rp_debug_error("cx_cxbe::open : Unable to seek to xbe section headers.\n");
+            goto cleanup;
+        }
+
+        p_section_header = new _section_header[image_header.dwSections];
+
+        if(p_section_header == 0)
+        {
+            rp_debug_error("cx_cxbe::open : Unable to allocate section headers [%d].\n", image_header.dwSections);
+            goto cleanup;
+        }
+
+        uint32 v;
+
+        for(v=0;v<image_header.dwSections;v++)
+        {
+            rp_debug_trace("cx_cxbe::open : reading xbe section header %d...\n", v);
+
+            chk |= xbe_file.get_uint32(&p_section_header[v].u_flags.dwFlags);
+            chk |= xbe_file.get_uint32(&p_section_header[v].dwVirtualAddr);
+            chk |= xbe_file.get_uint32(&p_section_header[v].dwVirtualSize);
+            chk |= xbe_file.get_uint32(&p_section_header[v].dwRawAddr);
+            chk |= xbe_file.get_uint32(&p_section_header[v].dwSizeofRaw);
+            chk |= xbe_file.get_uint32(&p_section_header[v].dwSectionNameAddr);
+            chk |= xbe_file.get_uint32(&p_section_header[v].dwSectionRefCount);
+            chk |= xbe_file.get_uint32(&p_section_header[v].dwHeadSharedRefCountAddr);
+            chk |= xbe_file.get_uint32(&p_section_header[v].dwTailSharedRefCountAddr);
+            chk |= xbe_file.get_barray(p_section_header[v].bzSectionDigest, 20);
+            
+            if(!chk)
+            {
+                rp_debug_error("cx_cxbe::open : Unable to read xbe section header %d.\n", v);
+                goto cleanup;
+            }
+        }
+    }
+
     ret = true;
 
 cleanup:
@@ -191,6 +239,12 @@ bool cx_cxbe::open(cx_cexe *p_cexe, const char *title, bool is_retail)
 
 bool cx_cxbe::close()
 {
+    if(p_section_header != 0)
+    {
+        delete[] p_section_header;
+        p_section_header = 0;
+    }
+
     if(p_extra_bytes != 0)
     {
         delete[] p_extra_bytes;
