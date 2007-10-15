@@ -140,7 +140,7 @@ bool cx_cxbe::dump_info(FILE *p_file)
     fprintf(p_file, "Size of Certificate              : 0x%.08X\n", certificate.dwSize);
     fprintf(p_file, "TimeDate Stamp                   : 0x%.08X (%s)\n", certificate.dwTimeDate, get_time_string(certificate.dwTimeDate).c_str());
     fprintf(p_file, "Title ID                         : 0x%.08X\n", certificate.dwTitleId);
-    fprintf(p_file, "Title Name                       : 0x%.08X (\"%s\")\n", certificate.wszTitleName, ascii_title);
+    fprintf(p_file, "Title Name                       : \"%s\")\n", ascii_title);
 
     // print alternate title IDs
     {

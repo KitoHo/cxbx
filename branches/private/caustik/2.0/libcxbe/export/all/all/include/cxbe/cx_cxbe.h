@@ -60,13 +60,22 @@ class cx_cxbe
         /*! close the currently loaded file */
         bool close();
 
-        /*! dump xbe information to the specified file*/
+        /*! dump xbe information to the specified file */
         bool dump_info(FILE *p_file);
 
     private:
 
+        /*! translate virtual address into pointers inside internal xbe cache */
+        void *get_addr(uint32 virt_addr);
+
         /*! convert time into a pretty string */
         std::string get_time_string(uint32 time_val);
+
+        /*! parse ascii string into std::string */
+        std::string parse_ascii(uint32 virt_addr);
+
+        /*! parse UTF-16 string into std::string */
+        std::string parse_utf16(uint32 virt_addr);
 
         /*! xbe image header */
         struct _image_header
@@ -148,10 +157,105 @@ class cx_cxbe
 
         /*! xbe title */
         char ascii_title[40];
+
+        /*! xbe section header */
+        struct _section_header
+        {
+            union _u_flags
+            {
+                struct _flags
+                {
+                    uint32 bWritable        : 1;    /*!< writable flag */
+                    uint32 bPreload         : 1;    /*!< preload flag */
+                    uint32 bExecutable      : 1;    /*!< executable flag */
+                    uint32 bInsertedFile    : 1;    /*!< inserted file flag */
+                    uint32 bHeadPageRO      : 1;    /*!< head page read only flag */
+                    uint32 bTailPageRO      : 1;    /*!< tail page read only flag */
+                    uint32 Unused_a1        : 1;    /*!< unused (or unknown) */
+                    uint32 Unused_a2        : 1;    /*!< unused (or unknown) */
+                    uint32 Unused_b1        : 8;    /*!< unused (or unknown) */
+                    uint32 Unused_b2        : 8;    /*!< unused (or unknown) */
+                    uint32 Unused_b3        : 8;    /*!< unused (or unknown) */
+                }
+                flags;
+
+                uint32 dwFlags;
+            }
+            u_flags;
+
+            uint32 dwVirtualAddr;               /*!< virtual address */
+            uint32 dwVirtualSize;               /*!< virtual size */
+            uint32 dwRawAddr;                   /*!< file offset to raw data */
+            uint32 dwSizeofRaw;                 /*!< size of raw data */
+            uint32 dwSectionNameAddr;           /*!< section name addr */
+            uint32 dwSectionRefCount;           /*!< section reference count */
+            uint32 dwHeadSharedRefCountAddr;    /*!< head shared page reference count address */
+            uint32 dwTailSharedRefCountAddr;    /*!< tail shared page reference count address */
+            uint08 bzSectionDigest[20];         /*!< section digest */
+        }
+        *p_section_header;
+
+        /*! xbe sections */
+        uint08 **p_section;
+
+        /*! xbe section names */
+        char (*section_name)[9];
+
+        /*! xbe library version */
+        struct _library_version
+        {
+            char   szName[8];                   /*!< library name */
+            uint16 wMajorVersion;               /*!< major version */
+            uint16 wMinorVersion;               /*!< minor version */
+            uint16 wBuildVersion;               /*!< build version */
+
+            union _u_flags
+            {
+                struct _flags
+                {
+                    uint16 QFEVersion       : 13;   /*!< QFE Version */
+                    uint16 Approved         : 2;    /*!< Approved? (0:no, 1:possibly, 2:yes) */
+                    uint16 bDebugBuild      : 1;    /*!< Is this a debug build? */
+                }
+                flags;
+
+                uint16 wFlags;
+            }
+            u_flags;
+        }
+        *p_library_version, *p_library_version_kernel, *p_library_version_xapi;
+
+        /*! xbe thread local storage information */
+        struct _tls
+        {
+            uint32 dwDataStartAddr;             /*!< raw start address */
+            uint32 dwDataEndAddr;               /*!< raw end address */
+            uint32 dwTLSIndexAddr;              /*!< tls index  address */
+            uint32 dwTLSCallbackAddr;           /*!< tls callback address */
+            uint32 dwSizeofZeroFill;            /*!< size of zero fill */
+            uint32 dwCharacteristics;           /*!< characteristics */
+        }
+        *p_tls;
+
+        /*! parse library version */
+        bool parse_library_version(rp_file *p_xbe_file, _library_version *p_library_version);
 };
 
 /*! size of raw xbe image header */
 #define CX_CXBE_SIZEOF_IMAGE_HEADER 0x0178
+
+/*! \name Xbe XOR keys */
+/*! \{ */
+
+/*! Entry Point XOR key (Debug) */
+#define CX_CXBE_XOR_KEY_EP_DEBUG    0x94859D4B
+/*! Entry Point XOR key (Retail) */
+#define CX_CXBE_XOR_KEY_EP_RETAIL   0xA8FC57AB
+/*! Kernel Thunk XOR key (Debug) */
+#define CX_CXBE_XOR_KEY_KT_DEBUG    0xEFB1F152
+/*! Kernel Thunk XOR key (Retail) */
+#define CX_CXBE_XOR_KEY_KT_RETAIL   0x5B6D40B6
+/*! \} */
 
 #endif
 
