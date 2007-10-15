@@ -568,9 +568,6 @@ std::string cx_cxbe::get_time_string(uint32 time_val)
 
 std::string cx_cxbe::parse_ascii(uint32 virt_addr)
 {
-    /*! @todo verify this is the realistic max */
-    static const int max_raw_size = 40;
-
     /*! @todo add proper UTF-16 parsing */
     char *virt_str = (char*)get_addr(virt_addr);
 
