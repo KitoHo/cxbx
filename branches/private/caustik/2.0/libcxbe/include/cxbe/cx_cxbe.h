@@ -148,6 +148,43 @@ class cx_cxbe
 
         /*! xbe title */
         char ascii_title[40];
+
+        /*! xbe section header */
+        struct _section_header
+        {
+            union _u_flags
+            {
+                struct _flags
+                {
+                    uint32 bWritable        : 1;    /*!< writable flag */
+                    uint32 bPreload         : 1;    /*!< preload flag */
+                    uint32 bExecutable      : 1;    /*!< executable flag */
+                    uint32 bInsertedFile    : 1;    /*!< inserted file flag */
+                    uint32 bHeadPageRO      : 1;    /*!< head page read only flag */
+                    uint32 bTailPageRO      : 1;    /*!< tail page read only flag */
+                    uint32 Unused_a1        : 1;    /*!< unused (or unknown) */
+                    uint32 Unused_a2        : 1;    /*!< unused (or unknown) */
+                    uint32 Unused_b1        : 8;    /*!< unused (or unknown) */
+                    uint32 Unused_b2        : 8;    /*!< unused (or unknown) */
+                    uint32 Unused_b3        : 8;    /*!< unused (or unknown) */
+                }
+                flags;
+
+                uint32 dwFlags;
+            }
+            u_flags;
+
+            uint32 dwVirtualAddr;               /*!< virtual address */
+            uint32 dwVirtualSize;               /*!< virtual size */
+            uint32 dwRawAddr;                   /*!< file offset to raw data */
+            uint32 dwSizeofRaw;                 /*!< size of raw data */
+            uint32 dwSectionNameAddr;           /*!< section name addr */
+            uint32 dwSectionRefCount;           /*!< section reference count */
+            uint32 dwHeadSharedRefCountAddr;    /*!< head shared page reference count address */
+            uint32 dwTailSharedRefCountAddr;    /*!< tail shared page reference count address */
+            uint08 bzSectionDigest[20];         /*!< section digest */
+        }
+        *p_section_header;
 };
 
 /*! size of raw xbe image header */
