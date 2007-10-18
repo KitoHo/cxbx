@@ -55,13 +55,13 @@ include ../import/regplat/all/all/build/Makefile.regplat
 # 
 
 ifeq ($(findstring -linux,$(TARGET)), -linux)
-TST_LIB += -L../import/regplat/$(TARGET)/release-static/lib/
+TST_LIB += -L../import/regplat/$(TARGET)/$(SUBTAR)/lib/
 TST_LIB += -lregplat
 endif
 
 ifeq ($(TARGET), cygwin-vs60)
 TST_LIB += kernel32.lib user32.lib gdi32.lib advapi32.lib winmm.lib
-TST_LIB += /LIBPATH:../import/regplat/$(TARGET)/release-static/lib/
+TST_LIB += /LIBPATH:../import/regplat/$(TARGET)/$(SUBTAR)/lib/
 TST_LIB += regplat.lib
 endif
 
