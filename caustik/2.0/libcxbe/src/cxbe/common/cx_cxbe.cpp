@@ -164,8 +164,7 @@ bool cx_cxbe::open(const wchar_t *file_name)
         chk |= xbe_file.get_uint32(&certificate.dwSize);
         chk |= xbe_file.get_uint32(&certificate.dwTimeDate);
         chk |= xbe_file.get_uint32(&certificate.dwTitleId);
-        /*! @todo support wchar_t more correctly by converting from UTF-16 to wchar_t */
-        chk |= xbe_file.get_barray((uint08*)certificate.wszTitleName, 40*sizeof(wchar_t));
+        chk |= xbe_file.get_utf16_wc(certificate.wszTitleName, 40);
         /*! @todo support uint32 arrays? */
         chk |= xbe_file.get_barray((uint08*)certificate.dwAlternateTitleId, 0x10*sizeof(uint32));
         chk |= xbe_file.get_uint32(&certificate.dwAllowedMedia);
@@ -582,22 +581,31 @@ std::string cx_cxbe::parse_utf16(uint32 virt_addr)
     /*! @todo verify this is the realistic max */
     static const int max_raw_size = 40;
 
-    /*! @todo add proper UTF-16 parsing */
-    wchar_t *virt_str = (wchar_t*)get_addr(virt_addr);
+    /*! obtain utf16 string */
+    const uint16 *utf16_str = (const uint16*)get_addr(virt_addr);
+
+    std::string ret_str = "";
 
     /*! convert string, if located */
-    if(virt_str != 0)
+    if(utf16_str != 0)
     {
+        rp_auto_malloc<wchar_t> wc_str(max_raw_size);
         rp_auto_malloc<char> raw_str(max_raw_size);
 
-        memset(raw_str, 0, max_raw_size*sizeof(char));
+        /*! convert from utf16 to wc */
+        rp_utf::utf16_to_wc(utf16_str, wc_str, max_raw_size);
 
-        wcstombs(raw_str, virt_str, max_raw_size-1);
+        /*! convert from wc to mbs */
+        {
+            memset(raw_str, 0, max_raw_size*sizeof(char));
+            wcstombs(raw_str, wc_str, max_raw_size-1);
+        }
 
-        return raw_str.get_ptr();
+        /*! return parsed string */
+        ret_str = raw_str.get_ptr();
     }
 
-    return "";
+    return ret_str;
 }
 
 bool cx_cxbe::parse_library_version(rp_file *p_xbe_file, _library_version *p_library_version)
