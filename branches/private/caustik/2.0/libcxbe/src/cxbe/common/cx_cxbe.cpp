@@ -165,8 +165,7 @@ bool cx_cxbe::open(const wchar_t *file_name)
         chk |= xbe_file.get_uint32(&certificate.dwTimeDate);
         chk |= xbe_file.get_uint32(&certificate.dwTitleId);
         chk |= xbe_file.get_utf16_wc(certificate.wszTitleName, 40);
-        /*! @todo support uint32 arrays? */
-        chk |= xbe_file.get_barray((uint08*)certificate.dwAlternateTitleId, 0x10*sizeof(uint32));
+        chk |= xbe_file.get_darray(certificate.dwAlternateTitleId, 0x10);
         chk |= xbe_file.get_uint32(&certificate.dwAllowedMedia);
         chk |= xbe_file.get_uint32(&certificate.dwGameRegion);
         chk |= xbe_file.get_uint32(&certificate.dwGameRatings);
