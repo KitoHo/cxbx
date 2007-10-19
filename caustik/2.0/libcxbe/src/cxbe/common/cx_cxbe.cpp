@@ -424,6 +424,12 @@ bool cx_cxbe::open(const wchar_t *file_name)
         chk |= parse.get_uint32(&p_tls->dwTLSCallbackAddr);
         chk |= parse.get_uint32(&p_tls->dwSizeofZeroFill);
         chk |= parse.get_uint32(&p_tls->dwCharacteristics);
+
+        if(!chk)
+        {
+            rp_debug_error("cx_cxbe::open : Unable to read Thread Local Storage information.\n");
+            goto cleanup;
+        }
     }
 
     ret = true;
@@ -529,13 +535,16 @@ void *cx_cxbe::get_addr(uint32 virt_addr)
         for(v=0;v<image_header.dwSections;v++)
         {
             uint32 sect_virt_addr = p_section_header[v].dwVirtualAddr;
-            uint32 sect_virt_size = p_section_header[v].dwVirtualSize;
+            uint32 sect_raw_size = p_section_header[v].dwSizeofRaw;
+
+            /*! @note we are using raw size, not virtual size. if necessary, we could place extra logic
+             *  which maps anything outside raw size but within virtual size, too */
 
             /*! validate virt_addr fits within this section's virtual address space */
-            if( (virt_addr >= sect_virt_addr) && (virt_addr < (sect_virt_addr + sect_virt_size)) )
+            if( (virt_addr >= sect_virt_addr) && (virt_addr < (sect_virt_addr + sect_raw_size)) )
             {
                 /*! return appropriate offset into raw section data */
-                return &p_section[v][sect_virt_addr - virt_addr];
+                return &p_section[v][virt_addr - sect_virt_addr];
             }
         }
     }
