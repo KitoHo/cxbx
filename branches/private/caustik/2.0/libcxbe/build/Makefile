@@ -37,6 +37,12 @@
 ##############################################################################
 
 #
+# Regplat Makefile base path
+# 
+
+REGPLAT_BASE = ../import/regplat/all/all/build/
+
+#
 # Project specific options
 # 
 
