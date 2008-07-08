@@ -43,6 +43,12 @@
 REGPLAT_BASE = ../import/regplat/all/all/build/
 
 #
+# Regplat tools Makefile base path
+#
+
+REGPLAT_TOOLS_BASE = ../import/regplat-tools/
+
+#
 # Project specific options
 # 
 
